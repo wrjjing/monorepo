@@ -1,16 +1,13 @@
-
-# 写入文件
-cat > .github/workflows/flutter-ci.yml <<'YAML'
 name: Flutter CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "app/**"
       - ".github/workflows/flutter-ci.yml"
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
       - "app/**"
       - ".github/workflows/flutter-ci.yml"
@@ -19,48 +16,40 @@ jobs:
   analyze_and_test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 探测是否存在 Flutter 工程（app/pubspec.yaml）
+      # 探测 app/pubspec.yaml 是否存在，输出 present=true/false
       - name: Probe Flutter app
         id: probe
+        shell: bash
         run: |
           if [ -f app/pubspec.yaml ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
+            echo "present=true"  >> "$GITHUB_OUTPUT"
           else
             echo "present=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # 如果没有 app/，打印信息并继续（整个 Job 仍成功）
-      - name: No app found, skip
-        if: ${{ steps.probe.outputs.present == 'false' }}
-        run: |
-          echo "No Flutter app (app/pubspec.yaml) found. Skipping Flutter CI."
-          exit 0
-
       - name: Setup Flutter
-        if: ${{ steps.probe.outputs.present == 'true' }}
+        if: steps.probe.outputs.present == 'true'
         uses: subosito/flutter-action@v2
         with:
-          channel: "stable"
+          channel: stable
 
       - name: Flutter version
-        if: ${{ steps.probe.outputs.present == 'true' }}
+        if: steps.probe.outputs.present == 'true'
         run: flutter --version
 
       - name: Pub get
-        if: ${{ steps.probe.outputs.present == 'true' }}
+        if: steps.probe.outputs.present == 'true'
         working-directory: app
         run: flutter pub get
 
       - name: Analyze
-        if: ${{ steps.probe.outputs.present == 'true' }}
+        if: steps.probe.outputs.present == 'true'
         working-directory: app
         run: flutter analyze
 
       - name: Test
-        if: ${{ steps.probe.outputs.present == 'true' }}
+        if: steps.probe.outputs.present == 'true'
         working-directory: app
         run: flutter test --no-pub
-
