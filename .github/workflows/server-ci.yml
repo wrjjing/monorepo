@@ -1,11 +1,13 @@
-cat > .github/workflows/server-ci.yml << 'YAML'
+---
 name: Server CI
 on:
   push:
+    branches: [main]
     paths:
       - "server/**"
       - ".github/workflows/server-ci.yml"
   pull_request:
+    branches: [main]
     paths:
       - "server/**"
       - ".github/workflows/server-ci.yml"
@@ -15,35 +17,19 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
+        shell: bash
         working-directory: server
-    env:
-      PYTHONPATH: ${{ github.workspace }}/server
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-          cache: "pip"
-          cache-dependency-path: "server/requirements.txt"
-
-      - name: Upgrade pip & install deps
+          cache: pip
+          cache-dependency-path: server/requirements.txt
+      - name: Install deps
         run: |
-          python -m pip install --upgrade pip setuptools wheel
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pytest pytest-cov
-
-      - name: Show env
-        run: |
-          python --version
-          pip freeze
-          echo "== LS =="
-          ls -la
-          echo "== LS tests =="
-          ls -la tests || true
-
       - name: Run tests
-        run: python -m pytest -q -ra
-YAML
+        run: pytest -q
