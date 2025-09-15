@@ -1,5 +1,5 @@
+cat > .github/workflows/server-ci.yml << 'YAML'
 name: Server CI
-
 on:
   push:
     paths:
@@ -16,6 +16,8 @@ jobs:
     defaults:
       run:
         working-directory: server
+    env:
+      PYTHONPATH: ${{ github.workspace }}/server
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -27,10 +29,21 @@ jobs:
           cache: "pip"
           cache-dependency-path: "server/requirements.txt"
 
-      - name: Install deps
+      - name: Upgrade pip & install deps
         run: |
+          python -m pip install --upgrade pip setuptools wheel
           pip install -r requirements.txt
           pip install pytest pytest-cov
 
+      - name: Show env
+        run: |
+          python --version
+          pip freeze
+          echo "== LS =="
+          ls -la
+          echo "== LS tests =="
+          ls -la tests || true
+
       - name: Run tests
-        run: pytest -q
+        run: python -m pytest -q -ra
+YAML
