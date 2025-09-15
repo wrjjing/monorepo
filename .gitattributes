@@ -1,2 +1,7 @@
-*.yml text eol=lf
+# 统一用 LF（避免 Actions 解析 YAML 报错）
+*.yml  text eol=lf
 *.yaml text eol=lf
+*.sh   text eol=lf
+*.py   text eol=lf
+*.dart text eol=lf
+
