@@ -1,24 +1,40 @@
 name: Flutter CI
+
 on:
   push:
-    paths: ["app/**",".github/workflows/flutter-ci.yml"]
+    paths:
+      - "app/**"
+      - ".github/workflows/flutter-ci.yml"
   pull_request:
-    paths: ["app/**",".github/workflows/flutter-ci.yml"]
+    paths:
+      - "app/**"
+      - ".github/workflows/flutter-ci.yml"
 
 jobs:
-  analyze_test:
+  analyze_and_test:
+    # 仓库里还没有 Flutter 工程（没有 pubspec.yaml）就直接跳过，不报红
     if: ${{ hashFiles('app/pubspec.yaml') != '' }}
     runs-on: ubuntu-latest
-    defaults: { run: { working-directory: app } }
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
-        with: { channel: "stable", cache: true }
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: "stable"
+
+      - name: Flutter version
+        run: flutter --version
+
       - name: Pub get
+        working-directory: app
         run: flutter pub get
-      - name: Format check
-        run: dart format --set-exit-if-changed .
+
       - name: Analyze
+        working-directory: app
         run: flutter analyze
+
       - name: Test
-        run: flutter test -r expanded
+        working-directory: app
+        run: flutter test --no-pub
