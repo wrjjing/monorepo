@@ -1,29 +1,45 @@
+# 更新 flutter-ci.yml
+cat > .github/workflows/flutter-ci.yml <<'YAML'
 name: Flutter CI
 on:
   push:
-    branches: [ "main" ]
+    branches: [ main ]
     paths:
       - "app/**"
-      - ".github/workflows/flutter-ci.yml"
   pull_request:
-    branches: [ "main" ]
+    branches: [ main ]
     paths:
       - "app/**"
-      - ".github/workflows/flutter-ci.yml"
 
 jobs:
   analyze_and_test:
-    if: ${{ hashFiles('app/pubspec.yaml') != '' }}
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: subosito/flutter-action@v2
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: stable
-      - run: flutter --version
-      - working-directory: app
+          channel: "stable"
+
+      - name: Flutter version
+        run: flutter --version
+
+      - name: Pub get
+        working-directory: app
         run: flutter pub get
-      - working-directory: app
+
+      - name: Analyze
+        working-directory: app
         run: flutter analyze
-      - working-directory: app
+
+      - name: Test
+        working-directory: app
         run: flutter test --no-pub
+YAML
+
+git add .github/workflows/flutter-ci.yml
+git commit -m "ci(flutter): trigger only on app/**; remove hashFiles"
+git pull --rebase origin main
+git push -u origin main
