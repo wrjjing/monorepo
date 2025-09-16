@@ -1,8 +1,5 @@
 fastapi
-uvicorn[standard]
-Pillow
-numpy
-opencv-python-headless
+uvicorn
 pytest
-httpx
-python-multipart
+requests
+httpx>=0.24.1,<1.0
