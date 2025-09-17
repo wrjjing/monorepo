@@ -1,61 +1,59 @@
-from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel
+from app.db import get_session
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlmodel import Field, Session, SQLModel, select
 
 router = APIRouter()
 
 
-class PetCreate(BaseModel):
-    """Input model for creating a pet."""
+class PetBase(SQLModel):
+    """Shared attributes for pet representations."""
 
     name: str
     age: int
 
 
-class Pet(PetCreate):
-    """Representation of a pet resource."""
+class Pet(PetBase, table=True):
+    """Database model for a pet."""
+
+    id: int | None = Field(default=None, primary_key=True)
+
+
+class PetCreate(PetBase):
+    """Input model for creating a pet."""
+
+
+class PetRead(PetBase):
+    """Representation of a pet resource returned by the API."""
 
     id: int
 
 
-_PETS: dict[int, Pet] = {}
-_NEXT_ID = 1
-
-
-def _reset_state() -> None:
-    """Reset the in-memory store. Intended for tests."""
-
-    global _NEXT_ID
-    _PETS.clear()
-    _NEXT_ID = 1
-
-
-@router.get("/pets", response_model=list[Pet])
-def list_pets() -> list[Pet]:
+@router.get("/pets", response_model=list[PetRead])
+def list_pets(session: Session = Depends(get_session)) -> list[PetRead]:
     """Return the collection of pets."""
 
-    return list(_PETS.values())
+    pets = session.exec(select(Pet)).all()
+    return pets
 
 
-@router.post("/pets", response_model=Pet, status_code=status.HTTP_201_CREATED)
-def create_pet(pet: PetCreate) -> Pet:
+@router.post("/pets", response_model=PetRead, status_code=status.HTTP_201_CREATED)
+def create_pet(pet: PetCreate, session: Session = Depends(get_session)) -> PetRead:
     """Create a new pet entry."""
 
-    global _NEXT_ID
-    pet_id = _NEXT_ID
-    _NEXT_ID += 1
-
-    new_pet = Pet(id=pet_id, **pet.model_dump())
-    _PETS[pet_id] = new_pet
+    new_pet = Pet(**pet.model_dump())
+    session.add(new_pet)
+    session.commit()
+    session.refresh(new_pet)
     return new_pet
 
 
-@router.get("/pets/{pet_id}", response_model=Pet)
-def get_pet(pet_id: int) -> Pet:
+@router.get("/pets/{pet_id}", response_model=PetRead)
+def get_pet(pet_id: int, session: Session = Depends(get_session)) -> PetRead:
     """Retrieve a pet by its identifier."""
 
-    try:
-        return _PETS[pet_id]
-    except KeyError as exc:  # pragma: no cover - defensive branch
+    pet = session.get(Pet, pet_id)
+    if pet is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Pet not found"
-        ) from exc
+        )
+    return pet
