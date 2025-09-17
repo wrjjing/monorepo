@@ -4,3 +4,5 @@ pytest
 requests
 httpx>=0.24.1,<1.0
 sqlmodel
+
+# ci: trigger
