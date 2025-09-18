@@ -1,18 +1,35 @@
-import pytest
-from app.main import app
-from app.routers import pets as pets_router
-from fastapi.testclient import TestClient
+from collections.abc import Generator
+from pathlib import Path
 
-client = TestClient(app)
+import pytest
+from app.db import get_session
+from app.main import app
+from fastapi.testclient import TestClient
+from sqlmodel import SQLModel, Session, create_engine
 
 
 @pytest.fixture(autouse=True)
-def reset_pets_state() -> None:
-    """Ensure the in-memory store starts empty for each test."""
+def override_session_dependency(tmp_path: Path) -> Generator[None, None, None]:
+    """Provide a fresh in-memory database for each test."""
 
-    pets_router._reset_state()
+    database_file = tmp_path / "test.db"
+    engine = create_engine(
+        f"sqlite:///{database_file}",
+        connect_args={"check_same_thread": False},
+    )
+    SQLModel.metadata.create_all(engine)
+
+    def _override_session() -> Generator[Session, None, None]:
+        with Session(engine) as session:
+            yield session
+
+    app.dependency_overrides[get_session] = _override_session
     yield
-    pets_router._reset_state()
+    app.dependency_overrides.pop(get_session, None)
+    SQLModel.metadata.drop_all(engine)
+
+
+client = TestClient(app)
 
 
 def test_pets_endpoint_returns_empty_list() -> None:
